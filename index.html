@@ -224,8 +224,7 @@
     {
         "imports": {
             "three": "https://unpkg.com/three@0.158.0/build/three.module.js",
-            "three/addons/": "https://unpkg.com/three@0.158.0/examples/jsm/",
-            "crypto-js": "https://unpkg.com/crypto-js@4.1.1/index.js"
+            "three/addons/": "https://unpkg.com/three@0.158.0/examples/jsm/"
         }
     }
     </script>
@@ -234,7 +233,6 @@
         import * as THREE from 'three';
         import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
         import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-        import * as CryptoJS from 'crypto-js';
 
         // Game State
         let scene, camera, renderer, controls, localGridHelper, groundPlane;
@@ -260,6 +258,15 @@
         let moveVector = new THREE.Vector3();
         let isRunning = false;
         let chatActive = false;
+
+        // Simple hash function for signing
+        async function simpleHash(text) {
+            const encoder = new TextEncoder();
+            const data = encoder.encode(text);
+            const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+        }
 
         // Initialize the game
         async function init() {
@@ -923,26 +930,26 @@
 
         function generateKeyPair() {
             // Simple key pair generation for demo
-            const privateKey = CryptoJS.lib.WordArray.random(256/8).toString();
-            const publicKey = CryptoJS.SHA256(privateKey).toString();
+            const privateKey = Array.from({length: 32}, () => Math.floor(Math.random() * 256)).map(b => b.toString(16).padStart(2, '0')).join('');
+            const publicKey = Array.from({length: 32}, () => Math.floor(Math.random() * 256)).map(b => b.toString(16).padStart(2, '0')).join('');
             
             return { privateKey, publicKey };
         }
 
-        function signEvent(eventType, eventData) {
+        async function signEvent(eventType, eventData) {
             if (!gameState.isHost || !gameState.privateKey) {
                 throw new Error('Not authorized to sign events');
             }
             
             const eventString = JSON.stringify({ type: eventType, data: eventData });
-            const signature = CryptoJS.HmacSHA256(eventString, gameState.privateKey).toString();
+            const signature = await simpleHash(eventString + gameState.privateKey);
             
             return signature;
         }
 
-        function verifySignature(eventType, eventData, signature, publicKey) {
+        async function verifySignature(eventType, eventData, signature, publicKey) {
             const eventString = JSON.stringify({ type: eventType, data: eventData });
-            const expectedSignature = CryptoJS.HmacSHA256(eventString, publicKey).toString();
+            const expectedSignature = await simpleHash(eventString + publicKey);
             
             return signature === expectedSignature;
         }
