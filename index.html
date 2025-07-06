@@ -172,7 +172,7 @@
     
     <div id="ui-container">
         <div id="controls-info">
-            <div><strong>WASD</strong> - Move | <strong>Mouse</strong> - Look | <strong>Shift</strong> - Run | <strong>Enter</strong> - Chat | <strong>`</strong> - Admin</div>
+            <div><strong>WASD</strong> - Move | <strong>Mouse</strong> - Look | <strong>Shift</strong> - Run | <strong>F</strong> - Camera Mode | <strong>Enter</strong> - Chat | <strong>`</strong> - Admin</div>
         </div>
         
         <div id="player-info">
@@ -239,6 +239,7 @@
         let raycaster, mouse = new THREE.Vector2();
         let players = new Map();
         let localPlayer = null;
+        let cameraMode = 'third-person'; // 'third-person' or 'first-person'
         let gameState = {
             isHost: false,
             hostId: null,
@@ -755,28 +756,63 @@
         }
 
         function setupControls() {
-            // Mouse lock for first person view
-            renderer.domElement.addEventListener('click', () => {
-                if (!chatActive) {
-                    renderer.domElement.requestPointerLock();
-                }
-            });
-            
-            document.addEventListener('pointerlockchange', () => {
-                if (document.pointerLockElement === renderer.domElement) {
-                    document.addEventListener('mousemove', onMouseMovePointerLock);
-                } else {
-                    document.removeEventListener('mousemove', onMouseMovePointerLock);
+            // Camera mode toggle
+            window.addEventListener('keydown', (e) => {
+                if (e.key === 'F' && !chatActive) {
+                    toggleCameraMode();
                 }
             });
         }
 
+        function toggleCameraMode() {
+            if (cameraMode === 'third-person') {
+                switchToFirstPerson();
+            } else {
+                switchToThirdPerson();
+            }
+        }
+
+        function switchToFirstPerson() {
+            cameraMode = 'first-person';
+            controls.enabled = false;
+            
+            // Request pointer lock
+            renderer.domElement.requestPointerLock();
+            
+            // Position camera at player's eye level
+            if (localPlayer) {
+                camera.position.copy(localPlayer.position);
+                camera.position.y += 1.5; // Eye level
+            }
+            
+            addChatMessage('system', 'Switched to first-person view. Press F to switch back to third-person.');
+        }
+
+        function switchToThirdPerson() {
+            cameraMode = 'third-person';
+            controls.enabled = true;
+            
+            // Exit pointer lock
+            if (document.pointerLockElement) {
+                document.exitPointerLock();
+            }
+            
+            // Position camera behind player
+            updateCameraToFollowPlayer();
+            
+            addChatMessage('system', 'Switched to third-person view. Press F to switch to first-person.');
+        }
+
         function onMouseMovePointerLock(event) {
-            if (localPlayer && document.pointerLockElement === renderer.domElement) {
+            if (cameraMode === 'first-person' && document.pointerLockElement === renderer.domElement) {
                 const sensitivity = 0.002;
-                localPlayer.rotation.y -= event.movementX * sensitivity;
                 
-                // Limit vertical rotation
+                // Rotate player body horizontally
+                if (localPlayer) {
+                    localPlayer.rotation.y -= event.movementX * sensitivity;
+                }
+                
+                // Rotate camera vertically
                 const euler = new THREE.Euler(0, 0, 0, 'YXZ');
                 euler.setFromQuaternion(camera.quaternion);
                 euler.x -= event.movementY * sensitivity;
@@ -798,6 +834,10 @@
                 case 'ShiftLeft':
                 case 'ShiftRight':
                     isRunning = true;
+                    break;
+                case 'KeyF':
+                    event.preventDefault();
+                    toggleCameraMode();
                     break;
                 case 'Enter':
                     event.preventDefault();
@@ -844,8 +884,12 @@
                 const speed = isRunning ? 20 : 10;
                 moveVector.multiplyScalar(speed);
                 
-                // Apply rotation
-                moveVector.applyQuaternion(localPlayer.quaternion);
+                // Apply rotation based on camera mode
+                if (cameraMode === 'first-person') {
+                    moveVector.applyQuaternion(localPlayer.quaternion);
+                } else {
+                    moveVector.applyQuaternion(localPlayer.quaternion);
+                }
                 
                 // Move player
                 localPlayer.position.add(moveVector);
@@ -853,8 +897,13 @@
                 // Keep player on ground
                 localPlayer.position.y = Math.max(1, localPlayer.position.y);
                 
-                // Update camera
-                updateCameraToFollowPlayer();
+                // Update camera position if in first-person mode
+                if (cameraMode === 'first-person') {
+                    camera.position.copy(localPlayer.position);
+                    camera.position.y += 1.5; // Eye level
+                } else {
+                    updateCameraToFollowPlayer();
+                }
                 
                 // Update presence
                 updatePlayerPresence();
@@ -991,9 +1040,26 @@
                 localGridHelper.visible = false;
             }
             
-            controls.update();
+            // Only update controls if in third-person mode
+            if (cameraMode === 'third-person') {
+                controls.update();
+            }
+            
             renderer.render(scene, camera);
         }
+
+        // Event listeners for pointer lock
+        document.addEventListener('pointerlockchange', () => {
+            if (document.pointerLockElement === renderer.domElement) {
+                document.addEventListener('mousemove', onMouseMovePointerLock);
+            } else {
+                document.removeEventListener('mousemove', onMouseMovePointerLock);
+                // If we exit pointer lock while in first-person, switch back to third-person
+                if (cameraMode === 'first-person') {
+                    switchToThirdPerson();
+                }
+            }
+        });
 
         // Start the game
         init();
