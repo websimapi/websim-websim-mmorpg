@@ -1,0 +1,997 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebSim MMORPG</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background: #000;
+            font-family: Arial, sans-serif;
+        }
+        
+        #ui-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1000;
+        }
+        
+        #chat-container {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            width: 400px;
+            height: 300px;
+            background: rgba(0, 0, 0, 0.8);
+            border: 2px solid #444;
+            border-radius: 8px;
+            pointer-events: auto;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        #chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px;
+            color: #fff;
+            font-size: 14px;
+        }
+        
+        #chat-input {
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.9);
+            border: none;
+            border-top: 1px solid #444;
+            color: #fff;
+            outline: none;
+        }
+        
+        #admin-menu {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.9);
+            border: 2px solid #444;
+            border-radius: 8px;
+            padding: 20px;
+            color: #fff;
+            pointer-events: auto;
+            max-width: 300px;
+        }
+        
+        #admin-menu.hidden {
+            display: none;
+        }
+        
+        #admin-menu h3 {
+            margin: 0 0 15px 0;
+            color: #4a9eff;
+        }
+        
+        #admin-menu label {
+            display: block;
+            margin: 10px 0 5px 0;
+            font-size: 14px;
+        }
+        
+        #admin-menu input, #admin-menu button {
+            width: 100%;
+            padding: 5px;
+            margin: 2px 0;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid #444;
+            border-radius: 4px;
+            color: #fff;
+        }
+        
+        #admin-menu button {
+            background: #4a9eff;
+            cursor: pointer;
+            padding: 8px;
+            margin: 5px 0;
+        }
+        
+        #admin-menu button:hover {
+            background: #357abd;
+        }
+        
+        #player-info {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            border: 2px solid #444;
+            border-radius: 8px;
+            padding: 15px;
+            color: #fff;
+            pointer-events: auto;
+            min-width: 200px;
+        }
+        
+        #controls-info {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.8);
+            border: 2px solid #444;
+            border-radius: 8px;
+            padding: 15px;
+            color: #fff;
+            pointer-events: none;
+            text-align: center;
+            font-size: 14px;
+        }
+        
+        #import-file-input {
+            display: none;
+        }
+        
+        .message {
+            margin: 5px 0;
+            padding: 2px 0;
+        }
+        
+        .message.system {
+            color: #4a9eff;
+            font-style: italic;
+        }
+        
+        .message.player {
+            color: #fff;
+        }
+        
+        .message .username {
+            font-weight: bold;
+            color: #ffaa00;
+        }
+        
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #fff;
+            font-size: 18px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 20px;
+            border-radius: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div id="loading" class="loading">Loading MMORPG...</div>
+    
+    <div id="ui-container">
+        <div id="controls-info">
+            <div><strong>WASD</strong> - Move | <strong>Mouse</strong> - Look | <strong>Shift</strong> - Run | <strong>Enter</strong> - Chat | <strong>`</strong> - Admin</div>
+        </div>
+        
+        <div id="player-info">
+            <h3>Player Info</h3>
+            <div>Name: <span id="player-name">Loading...</span></div>
+            <div>Level: <span id="player-level">1</span></div>
+            <div>Health: <span id="player-health">100/100</span></div>
+            <div>Experience: <span id="player-exp">0/100</span></div>
+            <div>Position: <span id="player-pos">0, 0, 0</span></div>
+            <div>Players Online: <span id="players-online">1</span></div>
+        </div>
+        
+        <div id="chat-container">
+            <div id="chat-messages"></div>
+            <input type="text" id="chat-input" placeholder="Press Enter to chat..." />
+        </div>
+        
+        <div id="admin-menu" class="hidden">
+            <h3>Admin Menu</h3>
+            <label>
+                <input type="checkbox" id="toggle-grid" checked> Show Grid
+            </label>
+            <label>
+                Terrain Width (km): <input type="number" id="terrain-width" value="256" min="1" max="1000">
+            </label>
+            <label>
+                Terrain Depth (km): <input type="number" id="terrain-depth" value="256" min="1" max="1000">
+            </label>
+            <label>
+                Grid Cell Size (m): <input type="number" id="grid-cell-size" value="1000" min="1" max="10000">
+            </label>
+            <label>
+                Min Zoom: <input type="number" id="min-zoom" value="10" min="1" max="1000">
+            </label>
+            <label>
+                Max Zoom: <input type="number" id="max-zoom" value="400000" min="1000" max="1000000">
+            </label>
+            <button id="generate-terrain">Generate Terrain</button>
+            <button id="export-terrain">Export Settings</button>
+            <button id="import-terrain">Import Settings</button>
+            <input type="file" id="import-file-input" accept=".json">
+            <br>
+            <button id="become-host">Become Host</button>
+            <button id="reset-world">Reset World</button>
+        </div>
+    </div>
+
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://unpkg.com/three@0.158.0/build/three.module.js",
+            "three/addons/": "https://unpkg.com/three@0.158.0/examples/jsm/",
+            "crypto-js": "https://unpkg.com/crypto-js@4.1.1/crypto-js.js"
+        }
+    }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+        import CryptoJS from 'crypto-js';
+
+        // Game State
+        let scene, camera, renderer, controls, localGridHelper, groundPlane;
+        let raycaster, mouse = new THREE.Vector2();
+        let players = new Map();
+        let localPlayer = null;
+        let gameState = {
+            isHost: false,
+            hostId: null,
+            privateKey: null,
+            publicKey: null,
+            worldSeed: null,
+            signedEvents: []
+        };
+
+        // WebSocket Connection
+        const room = new WebsimSocket();
+        let currentUser = null;
+        let playerData = null;
+
+        // Movement
+        let keys = {};
+        let moveVector = new THREE.Vector3();
+        let isRunning = false;
+        let chatActive = false;
+
+        // Initialize the game
+        async function init() {
+            document.getElementById('loading').style.display = 'block';
+            
+            try {
+                // Initialize WebSocket
+                await room.initialize();
+                currentUser = await window.websim.getCurrentUser();
+                
+                // Load or create player data
+                await loadPlayerData();
+                
+                // Setup Three.js scene
+                setupScene();
+                setupTerrain();
+                setupControls();
+                setupUI();
+                
+                // Setup multiplayer
+                setupMultiplayer();
+                
+                // Create local player
+                await createLocalPlayer();
+                
+                // Start game loop
+                animate();
+                
+                document.getElementById('loading').style.display = 'none';
+                addChatMessage('system', 'Welcome to the MMORPG! Use WASD to move, mouse to look around.');
+                
+            } catch (error) {
+                console.error('Failed to initialize game:', error);
+                document.getElementById('loading').innerHTML = 'Failed to load game. Please refresh.';
+            }
+        }
+
+        function setupScene() {
+            // Scene
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x87ceeb);
+            scene.fog = new THREE.Fog(0x87ceeb, 50000, 300000);
+
+            // Camera
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 100, 400000);
+            camera.position.set(0, 20000, 40000);
+
+            // Renderer
+            renderer = new THREE.WebGLRenderer({ antialias: true, logarithmicDepthBuffer: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            document.body.appendChild(renderer.domElement);
+
+            // Controls (initially using OrbitControls, will switch to first person later)
+            controls = new OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            controls.screenSpacePanning = false;
+            controls.minDistance = 10;
+            controls.maxDistance = 400000;
+            controls.maxPolarAngle = Math.PI / 2;
+
+            // Raycaster
+            raycaster = new THREE.Raycaster();
+
+            // Lighting
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+            scene.add(ambientLight);
+
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 1.0);
+            directionalLight.position.set(130000, 100000, 80000);
+            directionalLight.castShadow = true;
+            directionalLight.shadow.mapSize.width = 2048;
+            directionalLight.shadow.mapSize.height = 2048;
+            scene.add(directionalLight);
+
+            // Event listeners
+            window.addEventListener('resize', onWindowResize, false);
+            window.addEventListener('keydown', onKeyDown, false);
+            window.addEventListener('keyup', onKeyUp, false);
+            window.addEventListener('mousemove', onMouseMove, false);
+        }
+
+        function setupTerrain() {
+            const generateBtn = document.getElementById('generate-terrain');
+            const toggleGridCheckbox = document.getElementById('toggle-grid');
+            const gridCellSizeInput = document.getElementById('grid-cell-size');
+
+            // Initial terrain generation
+            generateTerrain(256000, 256000); // 256km x 256km
+            updateLocalGrid(1000);
+
+            // Event listeners
+            generateBtn.addEventListener('click', () => {
+                const width = parseFloat(document.getElementById('terrain-width').value);
+                const depth = parseFloat(document.getElementById('terrain-depth').value);
+                const cellSize = parseFloat(document.getElementById('grid-cell-size').value);
+                const minZoom = parseFloat(document.getElementById('min-zoom').value);
+                const maxZoom = parseFloat(document.getElementById('max-zoom').value);
+
+                if (isNaN(width) || isNaN(depth) || isNaN(cellSize) || width <= 0 || depth <= 0 || cellSize <= 0) {
+                    alert("Please enter valid positive numbers for terrain dimensions.");
+                    return;
+                }
+
+                const widthM = width * 1000;
+                const depthM = depth * 1000;
+
+                generateTerrain(widthM, depthM);
+                updateLocalGrid(cellSize);
+
+                controls.minDistance = minZoom;
+                controls.maxDistance = maxZoom;
+                
+                const maxDimM = Math.max(widthM, depthM);
+                camera.position.set(0, maxDimM / 8, maxDimM / 4);
+                controls.target.set(0, 0, 0);
+                controls.update();
+            });
+        }
+
+        function generateTerrain(widthM, depthM) {
+            if (groundPlane) {
+                scene.remove(groundPlane);
+                groundPlane.geometry.dispose();
+                groundPlane.material.dispose();
+            }
+
+            const groundGeometry = new THREE.PlaneGeometry(widthM, depthM);
+            const groundMaterial = new THREE.MeshStandardMaterial({
+                color: 0x228B22,
+            });
+            groundPlane = new THREE.Mesh(groundGeometry, groundMaterial);
+            groundPlane.rotation.x = -Math.PI / 2;
+            groundPlane.receiveShadow = true;
+            scene.add(groundPlane);
+
+            const maxDim = Math.max(widthM, depthM);
+            camera.far = maxDim * 2;
+            camera.updateProjectionMatrix();
+            
+            scene.fog.near = maxDim * 0.1;
+            scene.fog.far = maxDim * 1.5;
+        }
+
+        function updateLocalGrid(cellSizeM, divisions = 20) {
+            if (localGridHelper) {
+                scene.remove(localGridHelper);
+                localGridHelper.geometry.dispose();
+                localGridHelper.material.dispose();
+            }
+
+            const size = cellSizeM * divisions;
+            localGridHelper = new THREE.GridHelper(size, divisions, 0xffffff, 0xffffff);
+            localGridHelper.material.depthTest = false;
+            localGridHelper.material.depthWrite = false;
+            localGridHelper.renderOrder = 1;
+            localGridHelper.position.y = 2;
+            localGridHelper.visible = false;
+            scene.add(localGridHelper);
+        }
+
+        async function loadPlayerData() {
+            // Try to load from database first
+            const dbPlayers = room.collection('player_data').filter({ username: currentUser.username }).getList();
+            
+            if (dbPlayers.length > 0) {
+                playerData = dbPlayers[0];
+            } else {
+                // Create new player data
+                playerData = await room.collection('player_data').create({
+                    username: currentUser.username,
+                    level: 1,
+                    health: 100,
+                    maxHealth: 100,
+                    experience: 0,
+                    experienceToNext: 100,
+                    position: { x: 0, y: 0, z: 0 },
+                    rotation: { x: 0, y: 0, z: 0 },
+                    inventory: {},
+                    stats: {
+                        strength: 10,
+                        agility: 10,
+                        intelligence: 10,
+                        vitality: 10
+                    }
+                });
+            }
+            
+            // Cache in localStorage
+            localStorage.setItem('playerData', JSON.stringify(playerData));
+            
+            // Update UI
+            updatePlayerUI();
+        }
+
+        function updatePlayerUI() {
+            document.getElementById('player-name').textContent = currentUser.username;
+            document.getElementById('player-level').textContent = playerData.level;
+            document.getElementById('player-health').textContent = `${playerData.health}/${playerData.maxHealth}`;
+            document.getElementById('player-exp').textContent = `${playerData.experience}/${playerData.experienceToNext}`;
+            
+            if (localPlayer) {
+                const pos = localPlayer.position;
+                document.getElementById('player-pos').textContent = `${Math.round(pos.x)}, ${Math.round(pos.y)}, ${Math.round(pos.z)}`;
+            }
+        }
+
+        async function createLocalPlayer() {
+            // Create a simple robot mesh for now
+            const robotGroup = new THREE.Group();
+            
+            // Body
+            const bodyGeometry = new THREE.BoxGeometry(0.8, 1.2, 0.4);
+            const bodyMaterial = new THREE.MeshStandardMaterial({ color: 0x4a9eff });
+            const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+            body.position.y = 0.6;
+            body.castShadow = true;
+            robotGroup.add(body);
+            
+            // Head
+            const headGeometry = new THREE.BoxGeometry(0.5, 0.5, 0.5);
+            const headMaterial = new THREE.MeshStandardMaterial({ color: 0x6bb6ff });
+            const head = new THREE.Mesh(headGeometry, headMaterial);
+            head.position.y = 1.45;
+            head.castShadow = true;
+            robotGroup.add(head);
+            
+            // Arms
+            const armGeometry = new THREE.BoxGeometry(0.2, 0.8, 0.2);
+            const armMaterial = new THREE.MeshStandardMaterial({ color: 0x4a9eff });
+            
+            const leftArm = new THREE.Mesh(armGeometry, armMaterial);
+            leftArm.position.set(-0.6, 0.6, 0);
+            leftArm.castShadow = true;
+            robotGroup.add(leftArm);
+            
+            const rightArm = new THREE.Mesh(armGeometry, armMaterial);
+            rightArm.position.set(0.6, 0.6, 0);
+            rightArm.castShadow = true;
+            robotGroup.add(rightArm);
+            
+            // Legs
+            const legGeometry = new THREE.BoxGeometry(0.25, 0.8, 0.25);
+            const legMaterial = new THREE.MeshStandardMaterial({ color: 0x357abd });
+            
+            const leftLeg = new THREE.Mesh(legGeometry, legMaterial);
+            leftLeg.position.set(-0.2, -0.4, 0);
+            leftLeg.castShadow = true;
+            robotGroup.add(leftLeg);
+            
+            const rightLeg = new THREE.Mesh(legGeometry, legMaterial);
+            rightLeg.position.set(0.2, -0.4, 0);
+            rightLeg.castShadow = true;
+            robotGroup.add(rightLeg);
+            
+            // Position the robot
+            robotGroup.position.set(
+                playerData.position.x,
+                playerData.position.y + 1,
+                playerData.position.z
+            );
+            
+            robotGroup.userData = {
+                playerId: currentUser.id,
+                username: currentUser.username,
+                isLocal: true
+            };
+            
+            scene.add(robotGroup);
+            localPlayer = robotGroup;
+            
+            // Add collision box
+            const collisionBox = new THREE.Box3().setFromObject(robotGroup);
+            robotGroup.userData.collisionBox = collisionBox;
+            
+            // Update camera to follow player
+            updateCameraToFollowPlayer();
+        }
+
+        function updateCameraToFollowPlayer() {
+            if (localPlayer) {
+                const playerPos = localPlayer.position;
+                camera.position.set(
+                    playerPos.x,
+                    playerPos.y + 10,
+                    playerPos.z + 15
+                );
+                controls.target.copy(playerPos);
+                controls.update();
+            }
+        }
+
+        function setupMultiplayer() {
+            // Subscribe to player presence
+            room.subscribePresence((presence) => {
+                updatePlayersOnline(Object.keys(presence).length);
+                
+                // Update other players
+                for (const [clientId, playerState] of Object.entries(presence)) {
+                    if (clientId !== room.clientId) {
+                        updateOtherPlayer(clientId, playerState);
+                    }
+                }
+            });
+            
+            // Subscribe to events
+            room.onmessage = (event) => {
+                handleMultiplayerEvent(event.data);
+            };
+            
+            // Send initial player state
+            updatePlayerPresence();
+        }
+
+        function updatePlayerPresence() {
+            if (localPlayer && playerData) {
+                room.updatePresence({
+                    position: {
+                        x: localPlayer.position.x,
+                        y: localPlayer.position.y,
+                        z: localPlayer.position.z
+                    },
+                    rotation: {
+                        x: localPlayer.rotation.x,
+                        y: localPlayer.rotation.y,
+                        z: localPlayer.rotation.z
+                    },
+                    level: playerData.level,
+                    health: playerData.health,
+                    maxHealth: playerData.maxHealth,
+                    username: currentUser.username
+                });
+            }
+        }
+
+        function updateOtherPlayer(clientId, playerState) {
+            if (!players.has(clientId)) {
+                // Create new player
+                createOtherPlayer(clientId, playerState);
+            } else {
+                // Update existing player
+                const player = players.get(clientId);
+                if (player && playerState.position) {
+                    player.position.set(
+                        playerState.position.x,
+                        playerState.position.y,
+                        playerState.position.z
+                    );
+                    if (playerState.rotation) {
+                        player.rotation.set(
+                            playerState.rotation.x,
+                            playerState.rotation.y,
+                            playerState.rotation.z
+                        );
+                    }
+                }
+            }
+        }
+
+        function createOtherPlayer(clientId, playerState) {
+            // Create robot mesh for other player
+            const robotGroup = new THREE.Group();
+            
+            // Body
+            const bodyGeometry = new THREE.BoxGeometry(0.8, 1.2, 0.4);
+            const bodyMaterial = new THREE.MeshStandardMaterial({ color: 0xff6b6b });
+            const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+            body.position.y = 0.6;
+            body.castShadow = true;
+            robotGroup.add(body);
+            
+            // Head
+            const headGeometry = new THREE.BoxGeometry(0.5, 0.5, 0.5);
+            const headMaterial = new THREE.MeshStandardMaterial({ color: 0xff8e8e });
+            const head = new THREE.Mesh(headGeometry, headMaterial);
+            head.position.y = 1.45;
+            head.castShadow = true;
+            robotGroup.add(head);
+            
+            // Arms
+            const armGeometry = new THREE.BoxGeometry(0.2, 0.8, 0.2);
+            const armMaterial = new THREE.MeshStandardMaterial({ color: 0xff6b6b });
+            
+            const leftArm = new THREE.Mesh(armGeometry, armMaterial);
+            leftArm.position.set(-0.6, 0.6, 0);
+            leftArm.castShadow = true;
+            robotGroup.add(leftArm);
+            
+            const rightArm = new THREE.Mesh(armGeometry, armMaterial);
+            rightArm.position.set(0.6, 0.6, 0);
+            rightArm.castShadow = true;
+            robotGroup.add(rightArm);
+            
+            // Legs
+            const legGeometry = new THREE.BoxGeometry(0.25, 0.8, 0.25);
+            const legMaterial = new THREE.MeshStandardMaterial({ color: 0xd63447 });
+            
+            const leftLeg = new THREE.Mesh(legGeometry, legMaterial);
+            leftLeg.position.set(-0.2, -0.4, 0);
+            leftLeg.castShadow = true;
+            robotGroup.add(leftLeg);
+            
+            const rightLeg = new THREE.Mesh(legGeometry, legMaterial);
+            rightLeg.position.set(0.2, -0.4, 0);
+            rightLeg.castShadow = true;
+            robotGroup.add(rightLeg);
+            
+            // Position the robot
+            if (playerState.position) {
+                robotGroup.position.set(
+                    playerState.position.x,
+                    playerState.position.y,
+                    playerState.position.z
+                );
+            }
+            
+            robotGroup.userData = {
+                playerId: clientId,
+                username: playerState.username || 'Unknown',
+                isLocal: false
+            };
+            
+            scene.add(robotGroup);
+            players.set(clientId, robotGroup);
+        }
+
+        function updatePlayersOnline(count) {
+            document.getElementById('players-online').textContent = count;
+        }
+
+        function handleMultiplayerEvent(eventData) {
+            switch (eventData.type) {
+                case 'chat':
+                    addChatMessage('player', eventData.message, eventData.username);
+                    break;
+                case 'connected':
+                    addChatMessage('system', `${eventData.username} joined the game`);
+                    break;
+                case 'disconnected':
+                    addChatMessage('system', `${eventData.username} left the game`);
+                    // Remove player from scene
+                    if (players.has(eventData.clientId)) {
+                        const player = players.get(eventData.clientId);
+                        scene.remove(player);
+                        players.delete(eventData.clientId);
+                    }
+                    break;
+            }
+        }
+
+        function setupUI() {
+            // Chat system
+            const chatInput = document.getElementById('chat-input');
+            chatInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    const message = chatInput.value.trim();
+                    if (message) {
+                        sendChatMessage(message);
+                        chatInput.value = '';
+                    }
+                    chatInput.blur();
+                    chatActive = false;
+                }
+                if (e.key === 'Escape') {
+                    chatInput.blur();
+                    chatActive = false;
+                }
+            });
+            
+            chatInput.addEventListener('focus', () => {
+                chatActive = true;
+            });
+            
+            chatInput.addEventListener('blur', () => {
+                chatActive = false;
+            });
+            
+            // Admin menu
+            const adminMenu = document.getElementById('admin-menu');
+            
+            // Host buttons
+            document.getElementById('become-host').addEventListener('click', becomeHost);
+            document.getElementById('reset-world').addEventListener('click', resetWorld);
+        }
+
+        function setupControls() {
+            // Mouse lock for first person view
+            renderer.domElement.addEventListener('click', () => {
+                if (!chatActive) {
+                    renderer.domElement.requestPointerLock();
+                }
+            });
+            
+            document.addEventListener('pointerlockchange', () => {
+                if (document.pointerLockElement === renderer.domElement) {
+                    document.addEventListener('mousemove', onMouseMovePointerLock);
+                } else {
+                    document.removeEventListener('mousemove', onMouseMovePointerLock);
+                }
+            });
+        }
+
+        function onMouseMovePointerLock(event) {
+            if (localPlayer && document.pointerLockElement === renderer.domElement) {
+                const sensitivity = 0.002;
+                localPlayer.rotation.y -= event.movementX * sensitivity;
+                
+                // Limit vertical rotation
+                const euler = new THREE.Euler(0, 0, 0, 'YXZ');
+                euler.setFromQuaternion(camera.quaternion);
+                euler.x -= event.movementY * sensitivity;
+                euler.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, euler.x));
+                camera.quaternion.setFromEuler(euler);
+            }
+        }
+
+        function onKeyDown(event) {
+            if (chatActive) return;
+            
+            switch (event.code) {
+                case 'KeyW':
+                case 'KeyA':
+                case 'KeyS':
+                case 'KeyD':
+                    keys[event.code] = true;
+                    break;
+                case 'ShiftLeft':
+                case 'ShiftRight':
+                    isRunning = true;
+                    break;
+                case 'Enter':
+                    event.preventDefault();
+                    const chatInput = document.getElementById('chat-input');
+                    chatInput.focus();
+                    chatActive = true;
+                    break;
+                case 'Backquote':
+                    event.preventDefault();
+                    const adminMenu = document.getElementById('admin-menu');
+                    adminMenu.classList.toggle('hidden');
+                    break;
+            }
+        }
+
+        function onKeyUp(event) {
+            switch (event.code) {
+                case 'KeyW':
+                case 'KeyA':
+                case 'KeyS':
+                case 'KeyD':
+                    keys[event.code] = false;
+                    break;
+                case 'ShiftLeft':
+                case 'ShiftRight':
+                    isRunning = false;
+                    break;
+            }
+        }
+
+        function updateMovement() {
+            if (!localPlayer || chatActive) return;
+            
+            moveVector.set(0, 0, 0);
+            
+            if (keys['KeyW']) moveVector.z -= 1;
+            if (keys['KeyS']) moveVector.z += 1;
+            if (keys['KeyA']) moveVector.x -= 1;
+            if (keys['KeyD']) moveVector.x += 1;
+            
+            if (moveVector.length() > 0) {
+                moveVector.normalize();
+                
+                const speed = isRunning ? 20 : 10;
+                moveVector.multiplyScalar(speed);
+                
+                // Apply rotation
+                moveVector.applyQuaternion(localPlayer.quaternion);
+                
+                // Move player
+                localPlayer.position.add(moveVector);
+                
+                // Keep player on ground
+                localPlayer.position.y = Math.max(1, localPlayer.position.y);
+                
+                // Update camera
+                updateCameraToFollowPlayer();
+                
+                // Update presence
+                updatePlayerPresence();
+                
+                // Update UI
+                updatePlayerUI();
+            }
+        }
+
+        function sendChatMessage(message) {
+            room.send({
+                type: 'chat',
+                message: message,
+                username: currentUser.username
+            });
+        }
+
+        function addChatMessage(type, message, username = null) {
+            const chatMessages = document.getElementById('chat-messages');
+            const messageElement = document.createElement('div');
+            messageElement.className = `message ${type}`;
+            
+            if (type === 'player' && username) {
+                messageElement.innerHTML = `<span class="username">${username}:</span> ${message}`;
+            } else {
+                messageElement.textContent = message;
+            }
+            
+            chatMessages.appendChild(messageElement);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        function becomeHost() {
+            if (gameState.isHost) {
+                alert('You are already the host!');
+                return;
+            }
+            
+            // Generate key pair
+            const keyPair = generateKeyPair();
+            gameState.isHost = true;
+            gameState.hostId = room.clientId;
+            gameState.privateKey = keyPair.privateKey;
+            gameState.publicKey = keyPair.publicKey;
+            gameState.worldSeed = Math.random().toString(36).substring(2, 15);
+            
+            // Broadcast host status
+            room.send({
+                type: 'host_announcement',
+                hostId: room.clientId,
+                publicKey: gameState.publicKey,
+                worldSeed: gameState.worldSeed
+            });
+            
+            addChatMessage('system', 'You are now the host of this world!');
+        }
+
+        function resetWorld() {
+            if (!gameState.isHost) {
+                alert('Only the host can reset the world!');
+                return;
+            }
+            
+            // Reset world state
+            room.send({
+                type: 'world_reset',
+                hostId: room.clientId,
+                signature: signEvent('world_reset', { timestamp: Date.now() })
+            });
+            
+            addChatMessage('system', 'World has been reset by the host!');
+        }
+
+        function generateKeyPair() {
+            // Simple key pair generation for demo
+            const privateKey = CryptoJS.lib.WordArray.random(256/8).toString();
+            const publicKey = CryptoJS.SHA256(privateKey).toString();
+            
+            return { privateKey, publicKey };
+        }
+
+        function signEvent(eventType, eventData) {
+            if (!gameState.isHost || !gameState.privateKey) {
+                throw new Error('Not authorized to sign events');
+            }
+            
+            const eventString = JSON.stringify({ type: eventType, data: eventData });
+            const signature = CryptoJS.HmacSHA256(eventString, gameState.privateKey).toString();
+            
+            return signature;
+        }
+
+        function verifySignature(eventType, eventData, signature, publicKey) {
+            const eventString = JSON.stringify({ type: eventType, data: eventData });
+            const expectedSignature = CryptoJS.HmacSHA256(eventString, publicKey).toString();
+            
+            return signature === expectedSignature;
+        }
+
+        function onMouseMove(event) {
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            // Update movement
+            updateMovement();
+            
+            // Update local grid
+            const showGrid = document.getElementById('toggle-grid').checked;
+            if (showGrid && groundPlane && localGridHelper) {
+                raycaster.setFromCamera({ x: 0, y: 0 }, camera);
+                const intersects = raycaster.intersectObject(groundPlane);
+                
+                if (intersects.length > 0) {
+                    localGridHelper.visible = true;
+                    const intersectPoint = intersects[0].point;
+                    const cellSize = parseFloat(document.getElementById('grid-cell-size').value);
+                    
+                    localGridHelper.position.x = Math.round(intersectPoint.x / cellSize) * cellSize;
+                    localGridHelper.position.z = Math.round(intersectPoint.z / cellSize) * cellSize;
+                } else {
+                    localGridHelper.visible = false;
+                }
+            } else if (localGridHelper) {
+                localGridHelper.visible = false;
+            }
+            
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        // Start the game
+        init();
+    </script>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"4c6229722a6346bc8eb5cb0e5eae5d41","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
+</body>
+</html>
+
