@@ -312,7 +312,7 @@
             scene.fog = new THREE.Fog(0x87ceeb, 50000, 300000);
 
             // Camera
-            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 100, 400000);
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 10, 400000);
             camera.position.set(0, 20000, 40000);
 
             // Renderer
@@ -554,8 +554,8 @@
                 const playerPos = localPlayer.position;
                 camera.position.set(
                     playerPos.x,
-                    playerPos.y + 50,
-                    playerPos.z + 100
+                    playerPos.y + 500,
+                    playerPos.z + 800
                 );
                 controls.target.copy(playerPos);
                 controls.update();
@@ -782,7 +782,7 @@
             // Position camera at player's eye level
             if (localPlayer) {
                 camera.position.copy(localPlayer.position);
-                camera.position.y += 7.5; // Eye level
+                camera.position.y += 20; // Eye level, increased from 7.5
             }
             
             addChatMessage('system', 'Switched to first-person view. Press F to switch back to third-person.');
@@ -900,7 +900,7 @@
                 // Update camera position if in first-person mode
                 if (cameraMode === 'first-person') {
                     camera.position.copy(localPlayer.position);
-                    camera.position.y += 7.5; // Eye level
+                    camera.position.y += 20; // Eye level, increased from 7.5
                 } else {
                     updateCameraToFollowPlayer();
                 }
