@@ -562,40 +562,6 @@
             }
         }
 
-        async function loadPlayerData() {
-            // Try to load from database first
-            const dbPlayers = room.collection('player_data').filter({ username: currentUser.username }).getList();
-            
-            if (dbPlayers.length > 0) {
-                playerData = dbPlayers[0];
-            } else {
-                // Create new player data
-                playerData = await room.collection('player_data').create({
-                    username: currentUser.username,
-                    level: 1,
-                    health: 100,
-                    maxHealth: 100,
-                    experience: 0,
-                    experienceToNext: 100,
-                    position: { x: 0, y: 0, z: 0 },
-                    rotation: { x: 0, y: 0, z: 0 },
-                    inventory: {},
-                    stats: {
-                        strength: 10,
-                        agility: 10,
-                        intelligence: 10,
-                        vitality: 10
-                    }
-                });
-            }
-            
-            // Cache in localStorage
-            localStorage.setItem('playerData', JSON.stringify(playerData));
-            
-            // Update UI
-            updatePlayerUI();
-        }
-
         function setupMultiplayer() {
             // Subscribe to player presence
             room.subscribePresence((presence) => {
