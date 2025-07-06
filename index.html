@@ -902,7 +902,8 @@
                     camera.position.copy(localPlayer.position);
                     camera.position.y += 20; // Eye level, increased from 7.5
                 } else {
-                    updateCameraToFollowPlayer();
+                    // In third-person mode, only update the target, let OrbitControls handle the camera position
+                    controls.target.copy(localPlayer.position);
                 }
                 
                 // Update presence
