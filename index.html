@@ -482,53 +482,53 @@
             const robotGroup = new THREE.Group();
             
             // Body
-            const bodyGeometry = new THREE.BoxGeometry(0.8, 1.2, 0.4);
+            const bodyGeometry = new THREE.BoxGeometry(4, 6, 2);
             const bodyMaterial = new THREE.MeshStandardMaterial({ color: 0x4a9eff });
             const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
-            body.position.y = 0.6;
+            body.position.y = 3;
             body.castShadow = true;
             robotGroup.add(body);
             
             // Head
-            const headGeometry = new THREE.BoxGeometry(0.5, 0.5, 0.5);
+            const headGeometry = new THREE.BoxGeometry(2.5, 2.5, 2.5);
             const headMaterial = new THREE.MeshStandardMaterial({ color: 0x6bb6ff });
             const head = new THREE.Mesh(headGeometry, headMaterial);
-            head.position.y = 1.45;
+            head.position.y = 7.25;
             head.castShadow = true;
             robotGroup.add(head);
             
             // Arms
-            const armGeometry = new THREE.BoxGeometry(0.2, 0.8, 0.2);
+            const armGeometry = new THREE.BoxGeometry(1, 4, 1);
             const armMaterial = new THREE.MeshStandardMaterial({ color: 0x4a9eff });
             
             const leftArm = new THREE.Mesh(armGeometry, armMaterial);
-            leftArm.position.set(-0.6, 0.6, 0);
+            leftArm.position.set(-3, 3, 0);
             leftArm.castShadow = true;
             robotGroup.add(leftArm);
             
             const rightArm = new THREE.Mesh(armGeometry, armMaterial);
-            rightArm.position.set(0.6, 0.6, 0);
+            rightArm.position.set(3, 3, 0);
             rightArm.castShadow = true;
             robotGroup.add(rightArm);
             
             // Legs
-            const legGeometry = new THREE.BoxGeometry(0.25, 0.8, 0.25);
+            const legGeometry = new THREE.BoxGeometry(1.25, 4, 1.25);
             const legMaterial = new THREE.MeshStandardMaterial({ color: 0x357abd });
             
             const leftLeg = new THREE.Mesh(legGeometry, legMaterial);
-            leftLeg.position.set(-0.2, -0.4, 0);
+            leftLeg.position.set(-1, -2, 0);
             leftLeg.castShadow = true;
             robotGroup.add(leftLeg);
             
             const rightLeg = new THREE.Mesh(legGeometry, legMaterial);
-            rightLeg.position.set(0.2, -0.4, 0);
+            rightLeg.position.set(1, -2, 0);
             rightLeg.castShadow = true;
             robotGroup.add(rightLeg);
             
             // Position the robot
             robotGroup.position.set(
                 playerData.position.x,
-                playerData.position.y + 1,
+                playerData.position.y + 5,
                 playerData.position.z
             );
             
@@ -554,12 +554,46 @@
                 const playerPos = localPlayer.position;
                 camera.position.set(
                     playerPos.x,
-                    playerPos.y + 10,
-                    playerPos.z + 15
+                    playerPos.y + 50,
+                    playerPos.z + 100
                 );
                 controls.target.copy(playerPos);
                 controls.update();
             }
+        }
+
+        async function loadPlayerData() {
+            // Try to load from database first
+            const dbPlayers = room.collection('player_data').filter({ username: currentUser.username }).getList();
+            
+            if (dbPlayers.length > 0) {
+                playerData = dbPlayers[0];
+            } else {
+                // Create new player data
+                playerData = await room.collection('player_data').create({
+                    username: currentUser.username,
+                    level: 1,
+                    health: 100,
+                    maxHealth: 100,
+                    experience: 0,
+                    experienceToNext: 100,
+                    position: { x: 0, y: 0, z: 0 },
+                    rotation: { x: 0, y: 0, z: 0 },
+                    inventory: {},
+                    stats: {
+                        strength: 10,
+                        agility: 10,
+                        intelligence: 10,
+                        vitality: 10
+                    }
+                });
+            }
+            
+            // Cache in localStorage
+            localStorage.setItem('playerData', JSON.stringify(playerData));
+            
+            // Update UI
+            updatePlayerUI();
         }
 
         function setupMultiplayer() {
@@ -634,46 +668,46 @@
             const robotGroup = new THREE.Group();
             
             // Body
-            const bodyGeometry = new THREE.BoxGeometry(0.8, 1.2, 0.4);
+            const bodyGeometry = new THREE.BoxGeometry(4, 6, 2);
             const bodyMaterial = new THREE.MeshStandardMaterial({ color: 0xff6b6b });
             const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
-            body.position.y = 0.6;
+            body.position.y = 3;
             body.castShadow = true;
             robotGroup.add(body);
             
             // Head
-            const headGeometry = new THREE.BoxGeometry(0.5, 0.5, 0.5);
+            const headGeometry = new THREE.BoxGeometry(2.5, 2.5, 2.5);
             const headMaterial = new THREE.MeshStandardMaterial({ color: 0xff8e8e });
             const head = new THREE.Mesh(headGeometry, headMaterial);
-            head.position.y = 1.45;
+            head.position.y = 7.25;
             head.castShadow = true;
             robotGroup.add(head);
             
             // Arms
-            const armGeometry = new THREE.BoxGeometry(0.2, 0.8, 0.2);
+            const armGeometry = new THREE.BoxGeometry(1, 4, 1);
             const armMaterial = new THREE.MeshStandardMaterial({ color: 0xff6b6b });
             
             const leftArm = new THREE.Mesh(armGeometry, armMaterial);
-            leftArm.position.set(-0.6, 0.6, 0);
+            leftArm.position.set(-3, 3, 0);
             leftArm.castShadow = true;
             robotGroup.add(leftArm);
             
             const rightArm = new THREE.Mesh(armGeometry, armMaterial);
-            rightArm.position.set(0.6, 0.6, 0);
+            rightArm.position.set(3, 3, 0);
             rightArm.castShadow = true;
             robotGroup.add(rightArm);
             
             // Legs
-            const legGeometry = new THREE.BoxGeometry(0.25, 0.8, 0.25);
+            const legGeometry = new THREE.BoxGeometry(1.25, 4, 1.25);
             const legMaterial = new THREE.MeshStandardMaterial({ color: 0xd63447 });
             
             const leftLeg = new THREE.Mesh(legGeometry, legMaterial);
-            leftLeg.position.set(-0.2, -0.4, 0);
+            leftLeg.position.set(-1, -2, 0);
             leftLeg.castShadow = true;
             robotGroup.add(leftLeg);
             
             const rightLeg = new THREE.Mesh(legGeometry, legMaterial);
-            rightLeg.position.set(0.2, -0.4, 0);
+            rightLeg.position.set(1, -2, 0);
             rightLeg.castShadow = true;
             robotGroup.add(rightLeg);
             
@@ -681,7 +715,7 @@
             if (playerState.position) {
                 robotGroup.position.set(
                     playerState.position.x,
-                    playerState.position.y,
+                    playerState.position.y + 5,
                     playerState.position.z
                 );
             }
@@ -782,7 +816,7 @@
             // Position camera at player's eye level
             if (localPlayer) {
                 camera.position.copy(localPlayer.position);
-                camera.position.y += 1.5; // Eye level
+                camera.position.y += 7.5; // Eye level
             }
             
             addChatMessage('system', 'Switched to first-person view. Press F to switch back to third-person.');
@@ -881,7 +915,7 @@
             if (moveVector.length() > 0) {
                 moveVector.normalize();
                 
-                const speed = isRunning ? 20 : 10;
+                const speed = isRunning ? 100 : 50;
                 moveVector.multiplyScalar(speed);
                 
                 // Apply rotation based on camera mode
@@ -895,12 +929,12 @@
                 localPlayer.position.add(moveVector);
                 
                 // Keep player on ground
-                localPlayer.position.y = Math.max(1, localPlayer.position.y);
+                localPlayer.position.y = Math.max(5, localPlayer.position.y);
                 
                 // Update camera position if in first-person mode
                 if (cameraMode === 'first-person') {
                     camera.position.copy(localPlayer.position);
-                    camera.position.y += 1.5; // Eye level
+                    camera.position.y += 7.5; // Eye level
                 } else {
                     updateCameraToFollowPlayer();
                 }
